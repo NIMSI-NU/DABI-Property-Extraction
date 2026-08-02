@@ -89,7 +89,7 @@ def generate_models(root, input_list, main_dir=wk_dir):
         p.SetByBoolean(name='Fixed', sets=(p.sets['Fixed_Some'], p.sets['Pressure']), operation=DIFFERENCE)
 
         p.setMeshControls(elemShape=QUAD, regions=p.faces.getSequenceFromMask(('[#3 ]', ), ))
-        p.seedPart(deviationFactor=0.1, minSizeFactor=0.1, size=0.05)
+        p.seedPart(deviationFactor=0.1, minSizeFactor=0.1, size=0.03)
         p.generateMesh()
         p.Surface(name='Pressure', side1Edges=p.edges.getByBoundingBox(-1,-1,-1, 8,center_y + 1.6,11))
         p.Set(faces=p.faces.getByBoundingBox(-1,-1,-1, 11, 11, 11), name='Part')
