@@ -1,7 +1,7 @@
 # DABI-Property-Extraction
 Codes related to solving the inverse elastoplastic and creep problems for the Dimple Array Bulge Instrument (DABI)
 
-## Data_PostProcessing
+## Data PostProcessing
 Includes files used for pressure alignment (between DIC data and pressure test data) and files for DIC post-processing. 
 
 The post-processing files were used to perform rigid body motion removal, fit the data to a Gaussian surface, visualize the aligned pressure displacement data, and select frames to be used for inverse extraction. The "DIC_Data_Postprocessing_D1.ipynb" script was ran using Google Collab and requires the DIC data to run.
@@ -21,3 +21,8 @@ It is recommended to run this code using a machine with an NVIDIA GPU and the la
 The Static_Extraction folder can be directly placed into the jax-fem/applications folder as is when running.
 This code uses the pypardiso solver which also requires this library to be installed: https://pypi.org/project/pypardiso/
 
+## Creep Extraction
+The creep extraction folder contains the 3D models needed to perform the creep property extraction; an ABAQUS installation is required to run the codes.
+
+## Thermal and Pressure Interface Scripts
+Contains codes needed to plot DABI data, merge and synchronize DABI output files, and perform emissivity calibration via IR images.
