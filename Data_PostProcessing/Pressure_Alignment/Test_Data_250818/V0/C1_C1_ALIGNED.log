@@ -1,0 +1,9 @@
+Constant lag (frames): 10281.4
+Lag offset: 0
+p_flat_len = 0
+t_flat_inds = [0]
+p_flat_inds = [0]
+t_len = 5
+t_range = 0.0001
+max_disp = 0
+

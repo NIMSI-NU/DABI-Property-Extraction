@@ -1,0 +1,12 @@
+p_slope, d_slope = [0.002444, 0.000081]
+p_flat_len = 4
+t_flat_inds = []
+p_flat_inds = []
+t_len = 4
+t_range = 2
+
+p_bounds = [0, 0]
+d_bounds =  [0, 0]
+Constant lag (frames): 30380.2
+Lag applied to displacement: 1755562544046.1982 frames
+ frames
