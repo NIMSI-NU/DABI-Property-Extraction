@@ -1,0 +1,100 @@
+function writeSubroutine_nt(SubFileName, saveDir, CreepParams)
+% WRITE a fixed-form Fortran CREEP subroutine for time-dependent n(t).
+% CreepParams = [A4, n0, ninf, Abump, taur, taud, m1]
+% Produces a per-job .f file with these constants embedded.
+
+fname = fullfile(saveDir, SubFileName);
+fid = fopen(fname, 'w');
+
+A4    = CreepParams(1);
+n0    = CreepParams(2);
+ninf  = CreepParams(3);
+Abmp  = CreepParams(4);
+taur  = CreepParams(5);
+taud  = CreepParams(6);
+m1    = CreepParams(7);
+
+fprintf(fid,'      SUBROUTINE CREEP(DECRA,DESWA,STATEV,SERD,EC,ESW,P,QTILD,\n');
+fprintf(fid,'     1 TEMP,DTEMP,PREDEF,DPRED,TIME,DTIME,CMNAME,LEXIMP,LEND,\n');
+fprintf(fid,'     2 COORDS,NSTATV,NOEL,NPT,LAYER,KSPT,KSTEP,KINC)\n');
+fprintf(fid,'      INCLUDE ''ABA_PARAM.INC''\n');
+fprintf(fid,'      CHARACTER*80 CMNAME\n');
+fprintf(fid,'      DIMENSION DECRA(5),DESWA(2),STATEV(*),SERD(6),\n');
+fprintf(fid,'     1 EC(3),ESW(2),P(*),PREDEF(*),DPRED(*),TIME(2),COORDS(*)\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Embedded constants for this job ---\n');
+fprintf(fid,'      DOUBLE PRECISION A4C,N0C,NIFC,ABPC,TAURC,TAUDC,M1C\n');
+fprintf(fid,'      PARAMETER (A4C=% .8E,N0C=% .8E,NIFC=% .8E,ABPC=% .8E)\n', A4,n0,ninf,Abmp);
+fprintf(fid,'      PARAMETER (TAURC=% .8E,TAUDC=% .8E,M1C=% .8E)\n', taur,taud,m1);
+fprintf(fid,'C\n');
+fprintf(fid,'      DOUBLE PRECISION ZERO,ONE,HALF,TINY\n');
+fprintf(fid,'      PARAMETER (ZERO=0.D0,ONE=1.D0,HALF=5.D-1,TINY=1.D-20)\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Working vars (declare before executable for fixed form)\n');
+fprintf(fid,'      DOUBLE PRECISION SIGEQ,DT,TEND,TC,SC\n');
+fprintf(fid,'      DOUBLE PRECISION XI(3),W(3)\n');
+fprintf(fid,'      DOUBLE PRECISION IINT,DIDSG,TQ,NT,KT\n');
+fprintf(fid,'      DOUBLE PRECISION EPSO,EPSN,DEPS,POW,INV,BASE,DDEPS\n');
+fprintf(fid,'      INTEGER Q\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C ================== BEGIN EXECUTABLE ==================\n');
+fprintf(fid,'      SIGEQ = DMAX1(QTILD,TINY)\n');
+fprintf(fid,'      DT    = DTIME\n');
+fprintf(fid,'      TEND  = TIME(2)\n');
+fprintf(fid,'      TC    = TEND - HALF*DT\n');
+fprintf(fid,'      SC    = HALF*DT\n');
+fprintf(fid,'C\n');
+fprintf(fid,'      XI(1) = -DSQRT(3.D0/5.D0)\n');
+fprintf(fid,'      XI(2) =  0.D0\n');
+fprintf(fid,'      XI(3) =  DSQRT(3.D0/5.D0)\n');
+fprintf(fid,'      W(1)  =  5.D0/9.D0\n');
+fprintf(fid,'      W(2)  =  8.D0/9.D0\n');
+fprintf(fid,'      W(3)  =  5.D0/9.D0\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Integrate I = ∫ K(t) dt and dI/dσeq over the increment\n');
+fprintf(fid,'      IINT  = 0.D0\n');
+fprintf(fid,'      DIDSG = 0.D0\n');
+fprintf(fid,'      DO Q = 1,3\n');
+fprintf(fid,'         TQ = TC + SC*XI(Q)\n');
+fprintf(fid,'C        n(tq) = n_inf + (Abump + n0 - n_inf) e^{-t/taud} - Abump e^{-t/taur}\n');
+fprintf(fid,'         NT = NIFC + (ABPC + N0C - NIFC)*DEXP(-TQ/TAUDC)\n');
+fprintf(fid,'     1            - ABPC*DEXP(-TQ/TAURC)\n');
+fprintf(fid,'C        K(tq) = A4C * SIGEQ^{ NT }\n');
+fprintf(fid,'         KT = A4C * DEXP( NT * DLOG(SIGEQ) )\n');
+fprintf(fid,'         IINT  = IINT  + W(Q)*KT\n');
+fprintf(fid,'         DIDSG = DIDSG + W(Q)*(NT/SIGEQ)*KT\n');
+fprintf(fid,'      END DO\n');
+fprintf(fid,'      IINT  = SC*IINT\n');
+fprintf(fid,'      DIDSG = SC*DIDSG\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Previous accumulated equivalent creep (Abaqus keeps it)\n');
+fprintf(fid,'      EPSO = DMAX1(EC(1),ZERO)\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Update for m1 in [-1,0]\n');
+fprintf(fid,'      IF (DABS(M1C) .LE. 1.D-15) THEN\n');
+fprintf(fid,'         EPSN = EPSO + IINT\n');
+fprintf(fid,'      ELSE\n');
+fprintf(fid,'         POW  = ONE - M1C\n');
+fprintf(fid,'         INV  = ONE / POW\n');
+fprintf(fid,'         BASE = DEXP(POW*DLOG(DMAX1(EPSO,TINY))) + POW*IINT\n');
+fprintf(fid,'         EPSN = DMAX1(ZERO, BASE**INV)\n');
+fprintf(fid,'      END IF\n');
+fprintf(fid,'      DEPS = EPSN - EPSO\n');
+fprintf(fid,'C\n');
+fprintf(fid,'C --- Derivative d(Δε̄_cr)/dσ_eq returned in DECRA(5)\n');
+fprintf(fid,'      IF (DABS(M1C) .LE. 1.D-15) THEN\n');
+fprintf(fid,'         DDEPS = DIDSG\n');
+fprintf(fid,'      ELSE\n');
+fprintf(fid,'         DDEPS = DEXP(M1C*DLOG(DMAX1(EPSN,TINY))) * DIDSG\n');
+fprintf(fid,'      END IF\n');
+fprintf(fid,'C\n');
+fprintf(fid,'      DECRA(1) = DEPS\n');
+fprintf(fid,'      DECRA(2) = 0.D0\n');
+fprintf(fid,'      DECRA(3) = 0.D0\n');
+fprintf(fid,'      DECRA(4) = 0.D0\n');
+fprintf(fid,'      DECRA(5) = DDEPS\n');
+fprintf(fid,'      RETURN\n');
+fprintf(fid,'      END\n');
+
+fclose(fid);
+end
